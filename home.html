@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página Home</title>
+    <link rel="stylesheet" href="./assets/css/home.css">
+</head>
+
+<body>
+    <div id="navbar">
+        <div id="mensagemUsuario"></div>
+        <!-- <button onclick="apagarTodosUsuarios()">Apagar Todos os Usuários</button> -->
+        <button onclick="sair()">Sair</button>
+    </div>
+
+    <div id="formularioTarefa">
+        <h2>Cadastro de Tarefa</h2>
+        <form id="formTarefa">
+            <label for="titulo">Título da Tarefa:</label>
+            <input type="text" id="titulo" name="titulo" required>
+
+            <label for="dataInicio">Data de Início:</label>
+            <input type="date" id="dataInicio" name="dataInicio" required>
+
+            <label for="horaInicio">Horário de Início:</label>
+            <input type="time" id="horaInicio" name="horaInicio" required>
+
+            <label for="dataTermino">Data de Término:</label>
+            <input type="date" id="dataTermino" name="dataTermino" required>
+
+            <label for="horaTermino">Horário de Término:</label>
+            <input type="time" id="horaTermino" name="horaTermino" required>
+
+            <label for="descricao">Descrição da Tarefa:</label>
+            <textarea id="descricao" name="descricao" required></textarea>
+
+            <button type="button" onclick="cadastrarTarefa()">Cadastrar Tarefa</button>
+        </form>
+    </div>
+
+    <div id="listaTarefas">
+        <h2>Lista de Tarefas</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Tarefa</th>
+                    <th>Início</th>
+                    <th>Término</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tarefasTableBody">                
+            </tbody>
+        </table>
+    </div>
+    <div id="modalDescricao" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="fecharModalDescricao()">&times;</span>
+            <h2 id="modalTitulo"></h2>
+            <hr class="separador">
+            <p id="modalDescricaoTexto"></p>
+            <hr class="separador">
+            <button class="fechar-btn" onclick="fecharModalDescricao()">Fechar</button>
+        </div>
+    </div>
+
+    <script src="./assets/javascript/home.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alterar Tarefa</title>
+    <link rel="stylesheet" href="./assets/css/alterarTarefa.css">
+</head>
+
+<body>
+    <div id="formularioAlteracao">
+        <h2>Alteração de Tarefas</h2>
+        <form id="formAlteracao">
+            <label for="titulo">Novo Título da Tarefa:</label>
+            <input type="text" id="novoTitulo" name="novoTitulo" required>
+
+            <label for="dataInicio">Nova Data de Início:</label>
+            <input type="date" id="novaDataInicio" name="novaDataInicio" required>
+
+            <label for="horaInicio">Novo Horário de Início:</label>
+            <input type="time" id="novoHoraInicio" name="novoHoraInicio" required>
+
+            <label for="dataTermino">Nova Data de Término:</label>
+            <input type="date" id="novaDataTermino" name="novaDataTermino" required>
+
+            <label for="horaTermino">Novo Horário de Término:</label>
+            <input type="time" id="novoHoraTermino" name="novoHoraTermino" required>
+
+            <label for="novaDescricao">Nova Descrição da Tarefa:</label>
+            <textarea id="novaDescricao" name="novaDescricao" required></textarea>
+
+            <button type="button" onclick="salvarAlteracoes()">Salvar Alterações</button>
+            <!-- Botão Excluir Tarefa -->
+            <button type="button" style="background-color: red;" onclick="excluirTarefa()">Excluir Tarefa</button>
+
+            <!-- Botão Mudar Status para Concluída -->
+            <button type="button" id="btnMarcarRealizada" onclick="mudarStatusConcluida()">Marcar como Realizada</button>
+            
+            <button type="button" id="btnMarcarNaoRealizada" onclick="marcarComoNaoRealizada()">Marcar como Não Realizada</button>
+            
+
+            <button type="button" onclick="voltarParaHome()">Voltar para Home</button>
+        </form>
+        </form>
+    </div>
+
+    <script src="./assets/javascript/alterarTarefa.js"></script>
+</body>
+
+</html>
