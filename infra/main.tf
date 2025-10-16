@@ -10,7 +10,9 @@ terraform {
 }
 
 provider "koyeb" {
-  
+  #
+  # Use the KOYEB_TOKEN env variable to set your Koyeb API token.
+  #
 }
 
 resource "random_id" "suffix" {
