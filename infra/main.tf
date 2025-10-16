@@ -20,7 +20,7 @@ resource "random_id" "suffix" {
 }
 
 resource "koyeb_app" "app" {
-  name = "gerenciador-tarefas-${random_id.suffix.hex}"
+  name = "ger-tarefas-${random_id.suffix.hex}"
 }
 
 resource "koyeb_service" "service" {
