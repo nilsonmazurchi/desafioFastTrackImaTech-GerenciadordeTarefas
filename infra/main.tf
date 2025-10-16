@@ -19,7 +19,7 @@ resource "koyeb_service" "service" {
       protocol = "http"
     }
     scalings {
-      min = 1
+      min = 0
       max = 1
     }
     env {
