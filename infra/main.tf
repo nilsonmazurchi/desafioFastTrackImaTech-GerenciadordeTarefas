@@ -1,3 +1,18 @@
+terraform {
+  required_providers {
+    koyeb = {
+      source  = "koyeb/koyeb"
+    }
+    random = {
+      source = "hashicorp/random"      
+    }
+  }  
+}
+
+provider "koyeb" {
+  
+}
+
 resource "random_id" "suffix" {
   byte_length = 4
 }
@@ -7,12 +22,12 @@ resource "koyeb_app" "app" {
 }
 
 resource "koyeb_service" "service" {
-  app_name = koyeb_app.app.name
+  app_name = name
 
   definition {
-    name = "gerenciador-tarefas"
+    name = name
     instance_types {
-      type = "micro"
+      type = "free"
     }
     ports {
       port     = 80
