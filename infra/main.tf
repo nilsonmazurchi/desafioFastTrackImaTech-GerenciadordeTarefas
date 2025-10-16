@@ -22,7 +22,7 @@ resource "koyeb_app" "app" {
 }
 
 resource "koyeb_service" "service" {
-  app_name = name
+  app_name = koyeb_app.app.name
 
   definition {
     name = "gerenciador-tarefas"
