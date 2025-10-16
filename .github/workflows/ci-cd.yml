@@ -1,0 +1,139 @@
+name: CI/CD - Gerenciador de Tarefas
+
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: # Permite o acionamento manual
+
+env:
+  DOCKER_USER: nilsonmazurchi
+  SERVICE_NAME: gerenciador-tarefas
+
+jobs:
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Lint HTML, CSS and JS
+        run: |
+          echo "Executando lint básico..."
+          npm install -g htmlhint stylelint eslint || true
+          npx htmlhint "**/*.html" || true
+          npx stylelint "**/*.css" || true
+          npx eslint "**/*.js" || true
+
+  test:
+    name: Test Build (Static Files)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Validate HTML and CSS
+        run: |
+          echo "Verificando se os arquivos estão válidos..."
+          ls -l
+          test -f index.html || (echo "Faltando index.html!" && exit 1)
+          test -f style.css || echo "Aviso: style.css não encontrado"
+          test -f script.js || echo "Aviso: script.js não encontrado"
+
+  build-and-push:
+    name: Build and Push Docker Image
+    needs:
+      - lint
+      - test
+    runs-on: ubuntu-latest
+    outputs:
+      docker_image_name: ${{ steps.set-outputs.outputs.docker_image_name }}
+      docker_image_tag: ${{ steps.set-outputs.outputs.docker_image_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        id: build
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}:1.0.${{ github.run_id }}
+            ${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+            ${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Set outputs
+        id: set-outputs
+        run: |
+          echo "docker_image_name=${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}" >> $GITHUB_OUTPUT
+          echo "docker_image_tag=1.0.${{ github.run_id }}" >> $GITHUB_OUTPUT
+
+  deploy:
+    name: Deploy to Koyeb
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform -chdir=infra init
+        env:
+          KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
+
+      - name: Terraform Validate
+        run: terraform -chdir=infra validate
+
+      - name: Terraform Apply
+        run: terraform -chdir=infra apply -auto-approve
+        env:
+          KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
+          TF_VAR_docker_image_name: ${{ needs.build-and-push.outputs.docker_image_name }}
+          TF_VAR_docker_image_tag: ${{ needs.build-and-push.outputs.docker_image_tag }}
+
+  destroy:
+    name: Destroy Koyeb Staging
+    runs-on: ubuntu-latest
+    needs: deploy
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform -chdir=infra init
+        env:
+          KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
+
+      - name: Terraform Destroy
+        run: terraform -chdir=infra destroy -auto-approve
+        env:
+          KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
