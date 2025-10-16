@@ -25,7 +25,7 @@ resource "koyeb_service" "service" {
   app_name = name
 
   definition {
-    name = name
+    name = "gerenciador-tarefas"
     instance_types {
       type = "free"
     }
