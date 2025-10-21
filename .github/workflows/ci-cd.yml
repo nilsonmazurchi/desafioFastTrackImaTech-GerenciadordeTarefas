@@ -134,7 +134,7 @@ jobs:
   destroy:
     name: Destroy Koyeb Staging
     runs-on: ubuntu-latest
-    needs: deploy
+    needs: wait-before-destroy
 
     environment: staging
     steps:
