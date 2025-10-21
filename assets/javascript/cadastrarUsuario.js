@@ -43,5 +43,5 @@ function cadastrarUsuario() {
     alert('Cadastro realizado com sucesso! Faça login para continuar.');
 
     // Redireciona de forma RELATIVA
-    window.location.href = "index.html";
+    window.location.href = "/index.html";
 }

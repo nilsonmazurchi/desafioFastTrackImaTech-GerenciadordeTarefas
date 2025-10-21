@@ -19,5 +19,5 @@ function entrar() {
 
     localStorage.setItem('usuario', JSON.stringify(usuario));
 
-    window.location.href = 'home.html';
+    window.location.href = '/home.html';
 }
