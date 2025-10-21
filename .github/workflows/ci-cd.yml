@@ -145,7 +145,7 @@ jobs:
   cleanup-docker:
     name: 🐳 Cleanup Docker Images
     runs-on: ubuntu-latest
-    needs: destroy-auto  # ⚠️ Espera o destroy do Koyeb terminar
+    needs: destroy # ⚠️ Espera o destroy do Koyeb terminar
     
     steps:
       - name: Log in to Docker Hub
