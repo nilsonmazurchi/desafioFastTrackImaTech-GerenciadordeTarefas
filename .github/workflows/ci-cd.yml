@@ -89,8 +89,8 @@ jobs:
           echo "docker_image_name=${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}" >> $GITHUB_OUTPUT
           echo "docker_image_tag=1.0.${{ github.run_id }}" >> $GITHUB_OUTPUT
 
-  # 🚀 DEPLOY E DESTROY NO MESMO JOB (Solução mais simples)
-  deploy-and-destroy:
+  # 🎯 TUDO EM UM JOB SÓ: Deploy → Wait → Destroy Koyeb → Destroy Docker
+  deploy-wait-destroy:
     name: 🚀 Deploy → Wait → Destroy
     runs-on: ubuntu-latest
     needs: build-and-push
@@ -103,75 +103,54 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Terraform Init
-        run: terraform -chdir=infra init
-        env:
-          KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
-
-      - name: Terraform Validate
-        run: terraform -chdir=infra validate
-
-      # 🚀 FASE 1: DEPLOY
-      - name: Terraform Apply
-        id: apply
+      # 🚀 FASE 1: DEPLOY KOYEB
+      - name: Deploy to Koyeb
         run: |
-          echo "🚀 APLICANDO INFRAESTRUTURA..."
+          echo "🚀 INICIANDO DEPLOY NO KOYEB..."
+          terraform -chdir=infra init
           terraform -chdir=infra apply -auto-approve
-          
-          # Lista recursos criados para debug
-          echo "📋 RECURSOS CRIADOS:"
-          terraform -chdir=infra state list
         env:
           KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
           TF_VAR_docker_image_name: ${{ needs.build-and-push.outputs.docker_image_name }}
           TF_VAR_docker_image_tag: ${{ needs.build-and-push.outputs.docker_image_tag }}
 
       # ⏰ FASE 2: WAIT
-      - name: Wait 240 seconds
+      - name: Wait 60 seconds
         run: |
-          echo "⏰ AGUARDANDO 240 SEGUNDOS ANTES DO DESTROY..."
-          echo "⌛ Início: $(date)"
-          sleep 240
-          echo "✅ Fim: $(date) - Iniciando destroy"
+          echo "⏰ AGUARDANDO 60 SEGUNDOS..."
+          sleep 60
+          echo "✅ PRONTO PARA DESTROY"
 
-      # 🗑️ FASE 3: DESTROY
-      - name: Terraform Destroy
+      # 🗑️ FASE 3: DESTROY KOYEB
+      - name: Destroy Koyeb
         run: |
-          echo "🚨 INICIANDO DESTROY AUTOMÁTICO..."
-          
-          # Verifica estado atual
-          echo "📋 ESTADO ATUAL ANTES DO DESTROY:"
-          terraform -chdir=infra state list || echo "Nenhum recurso no estado"
-          
-          # Destrói tudo
-          terraform -chdir=infra destroy -auto-approve -refresh=true
-          
-          echo "✅ DESTROY CONCLUÍDO!"
+          echo "🗑️ DESTRUINDO APLICAÇÃO NO KOYEB..."
+          terraform -chdir=infra destroy -auto-approve
         env:
           KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
 
-  # 🐳 LIMPEZA DOCKER (separado para não afetar o terraform)
-  cleanup-docker:
-    name: 🐳 Cleanup Docker Images
-    runs-on: ubuntu-latest
-    needs: deploy-and-destroy
-    
-    steps:
-      - name: Delete Docker Images via API
+      # 🐳 FASE 4: DESTROY DOCKER IMAGES
+      - name: Destroy Docker Images
         run: |
-          echo "🧹 LIMPANDO IMAGENS DOCKER VIA API..."
+          echo "🐳 DELETANDO IMAGENS DO DOCKER HUB..."
           
-          # Deleta imagem específica do run
+          # Token para API do Docker Hub
+          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
+            -d '{"username": "'${{ env.DOCKER_USER }}'", "password": "'${{ secrets.DOCKER_PASS }}'"}' \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+          
+          # Deleta imagem pelo tag do run_id
           curl -X DELETE \
-            -u "${{ env.DOCKER_USER }}:${{ secrets.DOCKER_PASS }}" \
+            -H "Authorization: JWT $TOKEN" \
             "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/1.0.${{ github.run_id }}/" \
-            || echo "⚠️  Imagem run não encontrada"
+            && echo "✅ Imagem 1.0.${{ github.run_id }} deletada" \
+            || echo "⚠️  Imagem 1.0.${{ github.run_id }} não encontrada"
           
-          # Deleta imagem pelo SHA (apenas primeiros 10 chars)
-          SHORT_SHA=${GITHUB_SHA:0:10}
+          # Deleta imagem pelo SHA
           curl -X DELETE \
-            -u "${{ env.DOCKER_USER }}:${{ secrets.DOCKER_PASS }}" \
-            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/$SHORT_SHA/" \
-            || echo "⚠️  Imagem SHA não encontrada"
+            -H "Authorization: JWT $TOKEN" \
+            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/${{ github.sha }}/" \
+            && echo "✅ Imagem ${{ github.sha }} deletada" \
+            || echo "⚠️  Imagem ${{ github.sha }} não encontrada"
           
-          echo "✅ LIMPEZA DOCKER CONCLUÍDA!"
+          echo "🎯 LIMPEZA CONCLUÍDA!"
