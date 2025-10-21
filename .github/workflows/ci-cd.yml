@@ -152,5 +152,12 @@ jobs:
             "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/${{ github.sha }}/" \
             && echo "✅ Imagem ${{ github.sha }} deletada" \
             || echo "⚠️  Imagem ${{ github.sha }} não encontrada"
+
+          # Deleta Tag LATEST
+          curl -X DELETE \
+            -H "Authorization: JWT $TOKEN" \
+            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/latest/" \
+            && echo "✅ Tag latest DELETADA" \
+            || echo "⚠️  Tag latest não encontrada"
           
           echo "🎯 LIMPEZA CONCLUÍDA!"
