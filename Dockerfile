@@ -1,26 +1,18 @@
 FROM nginx:alpine
+
+# Copiar arquivos da aplicação
 COPY . /usr/share/nginx/html
-# Criar configuração Nginx com timeout aumentado
+
+# Configuração básica do Nginx
 RUN echo 'server { \
     listen 80; \
-    server_name localhost; \
+    server_name _; \
     root /usr/share/nginx/html; \
     index index.html; \
     \
-    client_header_timeout 60s; \
-    client_body_timeout 60s; \
-    send_timeout 60s; \
-    \
+    # Headers para arquivos JS \
     location ~* \.js$ { \
         add_header Content-Type application/javascript; \
-        try_files $uri =404; \
-    } \
-    \
-    location ~* \.css$ { \
-        add_header Content-Type text/css; \
-    } \
-    \
-    location /assets/ { \
         try_files $uri =404; \
     } \
     \
@@ -30,4 +22,6 @@ RUN echo 'server { \
 }' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
+
+# ✅ CORRETO: Nginx como processo principal
 CMD ["nginx", "-g", "daemon off;"]
