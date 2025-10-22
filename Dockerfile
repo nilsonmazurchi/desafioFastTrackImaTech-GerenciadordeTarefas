@@ -6,7 +6,7 @@ COPY . /usr/share/nginx/html/
 # Configuração que evita cache problemático
 RUN cat > /etc/nginx/conf.d/default.conf << 'EOF'
 server {
-    listen 80;
+    listen 8080;
     server_name _;
     root /usr/share/nginx/html;
     index index.html;
