@@ -115,10 +115,10 @@ jobs:
           TF_VAR_docker_image_tag: ${{ needs.build-and-push.outputs.docker_image_tag }}
 
       # ⏰ FASE 2: WAIT
-      - name: Wait 600 seconds
+      - name: Wait 360 seconds
         run: |
-          echo "⏰ AGUARDANDO 600 SEGUNDOS..."
-          sleep 600
+          echo "⏰ AGUARDANDO 360 SEGUNDOS..."
+          sleep 360
           echo "✅ PRONTO PARA DESTROY"
 
       # 🗑️ FASE 3: DESTROY KOYEB
