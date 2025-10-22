@@ -1,16 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerenciador de Tarefas</title>
-    <!-- Adicione os links para Bootstrap e seus próprios estilos -->
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
-
 <body>
-    
     <div id="container">
         <div class="form-image">
             <img src="assets/imagens/como-priorizar-tarefas-1024x682.webp">
@@ -32,7 +28,7 @@
                             <input type="password" id="senhaLogin" name="senhaLogin" placeholder="Senha" required>
                         </div>
                         <div class="login-button">
-                            <button type="submit" class="btn" onclick="entrar()">Entrar</button> 
+                            <button type="button" class="btn" onclick="entrar()">Entrar</button>
                         </div>
                     </div>
                     <div class="form-cadastro">
@@ -49,7 +45,7 @@
                             <input type="password" id="senhaCadastro" name="senhaCadastro" placeholder="Senha" required>
                         </div>
                         <div class="cadastro-button">
-                            <button type="submit" class="btn" onclick="cadastrarUsuario()">Cadastrar</button> 
+                            <button type="button" class="btn" onclick="cadastrarUsuario()">Cadastrar</button>
                         </div>
                     </div>
                 </div>
@@ -57,10 +53,7 @@
         </div>
     </div>
 
-    <!-- Adicione os scripts JavaScript -->
     <script src="assets/javascript/cadastrarUsuario.js"></script>
     <script src="assets/javascript/loginUsuario.js"></script>
-    
 </body>
-
 </html>
