@@ -12,19 +12,13 @@ RUN mkdir -p /run/nginx && \
         root /usr/share/nginx/html; \
         index index.html; \
         \
-        # Configuração de encoding \
-        charset utf-8; \
-        \
-        # Headers de segurança e performance \
-        add_header X-Content-Type-Options nosniff; \
-        \
         location ~* \.js$ { \
-            add_header Content-Type "application/javascript; charset=utf-8"; \
+            add_header Content-Type application/javascript; \
             try_files $uri =404; \
         } \
         \
         location ~* \.css$ { \
-            add_header Content-Type "text/css; charset=utf-8"; \
+            add_header Content-Type text/css; \
         } \
         \
         location /assets/ { \
@@ -36,10 +30,7 @@ RUN mkdir -p /run/nginx && \
         } \
     }' > /etc/nginx/conf.d/default.conf
 
-# Garantir que arquivos estão com encoding correto
-RUN apk add --no-cache file && \
-    find /usr/share/nginx/html -name "*.js" -exec sh -c "file -i {} | grep -q utf-8 || echo '⚠️  Encoding errado: {}'" \;
-
 EXPOSE 80
 
+# ✅ COMANDO CORRETO - Garantir PID e Nginx como principal
 CMD ["sh", "-c", "mkdir -p /run/nginx && nginx -g 'daemon off;'"]
