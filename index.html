@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="/">
     <title>Gerenciador de Tarefas</title>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
@@ -53,78 +54,7 @@
         </div>
     </div>
 
-     <script>
-    // ✅ FUNÇÃO CADASTRAR USUÁRIO - COLE AQUI O CÓDIGO
-    function cadastrarUsuario() {
-        console.log('Função cadastrarUsuario executada!');
-        
-        if (typeof(Storage) === "undefined") {
-            alert("O seu navegador não suporta armazenamento local. Tente outro navegador.");
-            return;
-        }
-
-        var nome = document.getElementById('nome').value.trim();
-        var email = document.getElementById('emailCadastro').value.trim();
-        var senha = document.getElementById('senhaCadastro').value.trim();
-
-        if (!nome || !email || !senha) {
-            alert('Por favor, preencha todos os campos.');
-            return;
-        }
-
-        var usuariosCadastrados = [];
-        try {
-            usuariosCadastrados = JSON.parse(localStorage.getItem('usuarios')) || [];
-        } catch (e) {
-            console.error("Erro ao ler localStorage:", e);
-            localStorage.removeItem('usuarios');
-        }
-
-        var usuarioExistente = usuariosCadastrados.find(user => user.email === email);
-        if (usuarioExistente) {
-            alert('Este e-mail já está cadastrado.');
-            return;
-        }
-
-        var novoUsuario = { nome, email, senha };
-        usuariosCadastrados.push(novoUsuario);
-        localStorage.setItem('usuarios', JSON.stringify(usuariosCadastrados));
-
-        document.getElementById('nome').value = '';
-        document.getElementById('emailCadastro').value = '';
-        document.getElementById('senhaCadastro').value = '';
-
-        alert('Cadastro realizado com sucesso! Faça login para continuar.');
-        window.location.href = "index.html";
-    }
-
-    // ✅ FUNÇÃO LOGIN - COLE AQUI O CÓDIGO
-    function entrar() {   
-        console.log('Função entrar executada!');
-        
-        var email = document.getElementById('email').value;
-        var senha = document.getElementById('senhaLogin').value;
-
-        var usuariosCadastrados = JSON.parse(localStorage.getItem('usuarios')) || [];
-        
-        var usuario = usuariosCadastrados.find(function (user) {
-            return user.email === email && user.senha === senha;
-        });
-
-        if (!usuario) {
-            alert('E-mail ou senha incorretos. Tente novamente.');
-            return;
-        }
-
-        alert('Login bem-sucedido! Bem-vindo, ' + usuario.nome + '!');
-        localStorage.setItem('usuario', JSON.stringify(usuario));
-        window.location.href = 'home.html';
-    }
-
-    // ✅ VERIFICAÇÃO DE CARREGAMENTO
-    console.log('=== ✅ JAVASCRIPT CARREGADO ===');
-    console.log('cadastrarUsuario disponível:', typeof cadastrarUsuario);
-    console.log('entrar disponível:', typeof entrar);
-    </script>
+    <script src="assets/javascript/cadastrarUsuario.js"></script>
+    <script src="assets/javascript/loginUsuario.js"></script>
 </body>
 </html>
