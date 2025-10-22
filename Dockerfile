@@ -11,34 +11,40 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
-    # Configurações de segurança
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    # Headers de segurança RELAXADOS para Koyeb
+    add_header Content-Security-Policy "default-src 'self' 'unsafe-inline' 'unsafe-eval' *; script-src 'self' 'unsafe-inline' 'unsafe-eval' *; style-src 'self' 'unsafe-inline' *" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
     
-    # Desabilitar cache durante desenvolvimento
-    add_header Cache-Control "no-cache, no-store, must-revalidate";
-    add_header Pragma "no-cache";
-    add_header Expires "0";
+    # Configurações de performance
+    sendfile on;
+    tcp_nopush on;
+    keepalive_timeout 65;
     
     location / {
         try_files $uri $uri/ /index.html;
     }
     
-    # Headers específicos para JavaScript
+    # Configuração ESPECIAL para JavaScript
     location ~* \.js$ {
-        add_header Content-Type application/javascript;
-        add_header Cache-Control "no-cache";
+        add_header Content-Type "application/javascript; charset=utf-8";
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
         add_header Access-Control-Allow-Origin "*";
+        add_header Access-Control-Allow-Methods "GET, OPTIONS";
+        add_header Access-Control-Allow-Headers "Content-Type";
         try_files $uri =404;
     }
     
+    # CSS
     location ~* \.css$ {
-        add_header Content-Type text/css;
+        add_header Content-Type "text/css; charset=utf-8";
         add_header Cache-Control "no-cache";
         try_files $uri =404;
     }
     
+    # Imagens
     location ~* \.(webp|jpg|jpeg|png|gif|ico)$ {
-        add_header Cache-Control "no-cache";
+        add_header Cache-Control "public, max-age=3600";
         try_files $uri =404;
     }
 }
