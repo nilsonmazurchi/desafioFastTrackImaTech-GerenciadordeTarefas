@@ -102,7 +102,7 @@
     function entrar() {   
         console.log('Função entrar executada!');
         
-        var email = document.getElementById('emailLogin').value;
+        var email = document.getElementById('email').value;
         var senha = document.getElementById('senhaLogin').value;
 
         var usuariosCadastrados = JSON.parse(localStorage.getItem('usuarios')) || [];
