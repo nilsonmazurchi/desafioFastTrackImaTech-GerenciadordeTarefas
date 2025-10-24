@@ -146,6 +146,8 @@ jobs:
       # 🗑️ FASE 4: DESTROY KOYEB (APENAS SE SOLICITADO)
       - name: Destroy Koyeb
         if: steps.check-destroy.outputs.should_destroy == 'true'
+        environment:
+          name: destroy
         run: |
           echo "🗑️ DESTRUINDO APLICAÇÃO NO KOYEB..."
           terraform -chdir=infra destroy -auto-approve
