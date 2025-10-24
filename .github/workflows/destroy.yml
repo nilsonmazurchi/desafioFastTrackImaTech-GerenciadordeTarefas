@@ -12,7 +12,7 @@ jobs:
   destroy:
     name: 🗑️ Destroy Koyeb and Docker Images
     runs-on: ubuntu-latest
-    environment: production
+    environment: staging
     
     steps:
       - name: Checkout code
@@ -23,8 +23,7 @@ jobs:
 
       - name: Destroy Koyeb Resources
         run: |
-          echo "🗑️ DESTRUINDO APLICAÇÃO NO KOYEB..."
-          terraform -chdir=infra init
+          echo "🗑️ DESTRUINDO APLICAÇÃO NO KOYEB..."          
           terraform -chdir=infra destroy -auto-approve
         env:
           KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
@@ -40,15 +39,22 @@ jobs:
           # Deleta imagem pelo tag do run_id
           curl -X DELETE \
             -H "Authorization: JWT $TOKEN" \
-            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/1.0.${{ github.run_number }}/" \
-            && echo "✅ Imagem 1.0.${{ github.run_number }} deletada" \
-            || echo "⚠️  Imagem 1.0.${{ github.run_number }} não encontrada"
+            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/1.0.${{ github.run_id }}/" \
+            && echo "✅ Imagem 1.0.${{ github.run_id }} deletada" \
+            || echo "⚠️  Imagem 1.0.${{ github.run_id }} não encontrada"
           
-          # Deleta imagem pelo SHA (opcional)
+          # Deleta imagem pelo SHA
+          curl -X DELETE \
+            -H "Authorization: JWT $TOKEN" \
+            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/${{ github.sha }}/" \
+            && echo "✅ Imagem ${{ github.sha }} deletada" \
+            || echo "⚠️  Imagem ${{ github.sha }} não encontrada"
+
+          # Deleta Tag LATEST
           curl -X DELETE \
             -H "Authorization: JWT $TOKEN" \
             "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/latest/" \
-            && echo "✅ Tag latest deletada" \
+            && echo "✅ Tag latest DELETADA" \
             || echo "⚠️  Tag latest não encontrada"
           
-          echo "🎯 DESTRUIÇÃO CONCLUÍDA!"
+          echo "🎯 LIMPEZA CONCLUÍDA!"
