@@ -89,9 +89,9 @@ jobs:
           echo "docker_image_name=${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}" >> $GITHUB_OUTPUT
           echo "docker_image_tag=1.0.${{ github.run_id }}" >> $GITHUB_OUTPUT
 
-  # 🎯 TUDO EM UM JOB SÓ: Deploy → Wait → Destroy Koyeb → Destroy Docker
-  deploy-wait-destroy:
-    name: 🚀 Deploy → Wait → Destroy
+  # 🚀 FASE 1: DEPLOY
+  deploy:
+    name: 🚀 Deploy to Koyeb
     runs-on: ubuntu-latest
     needs: build-and-push
     environment: staging
@@ -103,47 +103,65 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # 🚀 FASE 1: DEPLOY KOYEB
       - name: Deploy to Koyeb
         run: |
           echo "🚀 INICIANDO DEPLOY NO KOYEB..."
           terraform -chdir=infra init
           terraform -chdir=infra apply -auto-approve
+          echo "✅ DEPLOY CONCLUÍDO!"
+          echo "🌐 Aplicação disponível em: https://ger-tarefas-seu-app.koyeb.app"
         env:
           KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
           TF_VAR_docker_image_name: ${{ needs.build-and-push.outputs.docker_image_name }}
           TF_VAR_docker_image_tag: ${{ needs.build-and-push.outputs.docker_image_tag }}
 
-      # # ⏰ FASE 2: WAIT
-      # - name: Wait 90 seconds
-      #   run: |
-      #     echo "⏰ AGUARDANDO 90 SEGUNDOS..."
-      #     sleep 90
-      #     echo "✅ PRONTO PARA DESTROY"
-
-      # ✅ FASE 2.5: AGUARDAR APROVAÇÃO MANUAL
-      - name: Wait for manual approval
+  # ⏰ FASE 2: WAIT
+  wait:
+    name: ⏰ Wait for Testing
+    runs-on: ubuntu-latest
+    needs: deploy
+    environment: staging
+    
+    steps:
+      - name: Wait and display info
         run: |
-          echo "⏰ AGUARDANDO APROVAÇÃO MANUAL..."
-          echo "⚠️  Para continuar com o DESTROY, aprove este deployment no GitHub"
-          echo "📋 Se não aprovar em 5 minutos, o workflow será cancelado"
-          sleep 300  # 5 minutos de timeout
-          echo "❌ Tempo esgotado - Destroy não executado"
-      
-      # 🗑️ FASE 3: DESTROY KOYEB
-      - name: Destroy Koyeb
+          echo "⏰ AGUARDANDO 60 SEGUNDOS PARA TESTES..."
+          echo "🌐 Aplicação disponível: https://ger-tarefas-seu-app.koyeb.app"
+          echo "✅ Deploy concluído com sucesso!"
+          echo "⏰ Aguardando 60 segundos antes do destroy..."
+          sleep 60
+          echo "✅ PRONTO PARA DESTROY (se aprovado)"
+
+  # 🗑️ FASE 3: DESTROY (REQUER APROVAÇÃO)
+  destroy:
+    name: 🗑️ Destroy Resources
+    runs-on: ubuntu-latest
+    needs: wait
+    environment: staging
+    # ✅ ESTE JOB REQUER APROVAÇÃO MANUAL
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Destroy Koyeb Resources
         run: |
           echo "🗑️ DESTRUINDO APLICAÇÃO NO KOYEB..."
+          terraform -chdir=infra init
           terraform -chdir=infra destroy -auto-approve
+          echo "✅ Koyeb destruído!"
         env:
           KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
+          TF_VAR_docker_image_name: ${{ needs.build-and-push.outputs.docker_image_name }}
+          TF_VAR_docker_image_tag: ${{ needs.build-and-push.outputs.docker_image_tag }}
 
-      # 🐳 FASE 4: DESTROY DOCKER IMAGES
       - name: Destroy Docker Images
         run: |
           echo "🐳 DELETANDO IMAGENS DO DOCKER HUB..."
           
-          # Token para API do Docker Hub
           TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
             -d '{"username": "'${{ env.DOCKER_USER }}'", "password": "'${{ secrets.DOCKER_PASS }}'"}' \
             https://hub.docker.com/v2/users/login/ | jq -r .token)
@@ -169,4 +187,77 @@ jobs:
             && echo "✅ Tag latest DELETADA" \
             || echo "⚠️  Tag latest não encontrada"
           
-          echo "🎯 LIMPEZA CONCLUÍDA!"
+          echo "🎯 DESTRUIÇÃO CONCLUÍDA!"
+  
+  # # 🎯 TUDO EM UM JOB SÓ: Deploy → Wait → Destroy Koyeb → Destroy Docker
+  # deploy-wait-destroy:
+  #   name: 🚀 Deploy → Wait → Destroy
+  #   runs-on: ubuntu-latest
+  #   needs: build-and-push
+  #   environment: staging
+    
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+
+  #     - name: Set up Terraform
+  #       uses: hashicorp/setup-terraform@v3
+
+  #     # 🚀 FASE 1: DEPLOY KOYEB
+  #     - name: Deploy to Koyeb
+  #       run: |
+  #         echo "🚀 INICIANDO DEPLOY NO KOYEB..."
+  #         terraform -chdir=infra init
+  #         terraform -chdir=infra apply -auto-approve
+  #       env:
+  #         KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
+  #         TF_VAR_docker_image_name: ${{ needs.build-and-push.outputs.docker_image_name }}
+  #         TF_VAR_docker_image_tag: ${{ needs.build-and-push.outputs.docker_image_tag }}
+
+  #     # # ⏰ FASE 2: WAIT
+  #     # - name: Wait 90 seconds
+  #     #   run: |
+  #     #     echo "⏰ AGUARDANDO 90 SEGUNDOS..."
+  #     #     sleep 90
+  #     #     echo "✅ PRONTO PARA DESTROY"
+
+  #     # 🗑️ FASE 3: DESTROY KOYEB
+  #     - name: Destroy Koyeb
+  #       run: |
+  #         echo "🗑️ DESTRUINDO APLICAÇÃO NO KOYEB..."
+  #         terraform -chdir=infra destroy -auto-approve
+  #       env:
+  #         KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
+
+  #     # 🐳 FASE 4: DESTROY DOCKER IMAGES
+  #     - name: Destroy Docker Images
+  #       run: |
+  #         echo "🐳 DELETANDO IMAGENS DO DOCKER HUB..."
+          
+  #         # Token para API do Docker Hub
+  #         TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
+  #           -d '{"username": "'${{ env.DOCKER_USER }}'", "password": "'${{ secrets.DOCKER_PASS }}'"}' \
+  #           https://hub.docker.com/v2/users/login/ | jq -r .token)
+          
+  #         # Deleta imagem pelo tag do run_id
+  #         curl -X DELETE \
+  #           -H "Authorization: JWT $TOKEN" \
+  #           "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/1.0.${{ github.run_id }}/" \
+  #           && echo "✅ Imagem 1.0.${{ github.run_id }} deletada" \
+  #           || echo "⚠️  Imagem 1.0.${{ github.run_id }} não encontrada"
+          
+  #         # Deleta imagem pelo SHA
+  #         curl -X DELETE \
+  #           -H "Authorization: JWT $TOKEN" \
+  #           "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/${{ github.sha }}/" \
+  #           && echo "✅ Imagem ${{ github.sha }} deletada" \
+  #           || echo "⚠️  Imagem ${{ github.sha }} não encontrada"
+
+  #         # Deleta Tag LATEST
+  #         curl -X DELETE \
+  #           -H "Authorization: JWT $TOKEN" \
+  #           "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/latest/" \
+  #           && echo "✅ Tag latest DELETADA" \
+  #           || echo "⚠️  Tag latest não encontrada"
+          
+  #         echo "🎯 LIMPEZA CONCLUÍDA!"
