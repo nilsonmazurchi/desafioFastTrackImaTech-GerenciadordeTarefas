@@ -16,7 +16,25 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4      
+        uses: actions/checkout@v4
+
+      - name: Get latest image info
+        id: image-info
+        run: |
+          # Pega a última imagem do Docker Hub
+          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
+            -d '{"username": "'${{ env.DOCKER_USER }}'", "password": "'${{ secrets.DOCKER_PASS }}'"}' \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+          
+          # Busca as tags disponíveis
+          TAGS=$(curl -s -H "Authorization: JWT $TOKEN" \
+            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/?page_size=10")
+          
+          # Pega a última tag (mais recente)
+          LATEST_TAG=$(echo "$TAGS" | jq -r '.results[0].name' 2>/dev/null || echo "latest")
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          
+          echo "📦 Imagem a ser destruída: ${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}:$LATEST_TAG"      
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
