@@ -125,11 +125,10 @@ jobs:
           TF_VAR_docker_image_tag: ${{ needs.build-and-push.outputs.docker_image_tag }}
 
       # ⏰ FASE 2: WAIT
-      - name: Wait 60 seconds
+      - name: Wait 120 seconds
         run: |
-          echo "⏰ AGUARDANDO 60 SEGUNDOS..."
-          echo "🌐 Aplicação rodando: https://ger-tarefas-seu-app.koyeb.app"
-          sleep 60
+          echo "⏰ AGUARDANDO 120 SEGUNDOS..."          
+          sleep 120
           echo "✅ PRONTO PARA PRÓXIMA FASE"
 
       # ❓ FASE 3: VERIFICAR SE DEVE EXECUTAR DESTROY
