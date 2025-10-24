@@ -2,7 +2,6 @@
 
 on:
   workflow_dispatch:  # Só executa manualmente
-    
 
 env:
   DOCKER_USER: nilsonmazurchi
@@ -34,7 +33,7 @@ jobs:
           LATEST_TAG=$(echo "$TAGS" | jq -r '.results[0].name' 2>/dev/null || echo "latest")
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
           
-          echo "📦 Imagem a ser destruída: ${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}:$LATEST_TAG"      
+          echo "📦 Imagem a ser destruída: ${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}:$LATEST_TAG"
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -46,9 +45,9 @@ jobs:
           terraform -chdir=infra destroy -auto-approve
         env:
           KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
-          TF_VAR_docker_image_name: ${{ needs.build-and-push.outputs.docker_image_name }}
-          TF_VAR_docker_image_tag: ${{ needs.build-and-push.outputs.docker_image_tag }}
-
+          # Usa a tag mais recente encontrada
+          TF_VAR_docker_image_name: ${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}
+          TF_VAR_docker_image_tag: ${{ steps.image-info.outputs.latest_tag }}
 
       - name: Destroy Docker Images
         run: |
@@ -58,25 +57,16 @@ jobs:
             -d '{"username": "'${{ env.DOCKER_USER }}'", "password": "'${{ secrets.DOCKER_PASS }}'"}' \
             https://hub.docker.com/v2/users/login/ | jq -r .token)
           
-          # Deleta imagem pelo tag do run_id
-          curl -X DELETE \
-            -H "Authorization: JWT $TOKEN" \
-            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/1.0.${{ github.run_id }}/" \
-            && echo "✅ Imagem 1.0.${{ github.run_id }} deletada" \
-            || echo "⚠️  Imagem 1.0.${{ github.run_id }} não encontrada"
+          # Deleta várias tags possíveis
+          TAGS_TO_DELETE=("latest" "1.0.${{ github.run_id }}" "${{ github.sha }}")
           
-          # Deleta imagem pelo SHA
-          curl -X DELETE \
-            -H "Authorization: JWT $TOKEN" \
-            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/${{ github.sha }}/" \
-            && echo "✅ Imagem ${{ github.sha }} deletada" \
-            || echo "⚠️  Imagem ${{ github.sha }} não encontrada"
-
-          # Deleta Tag LATEST
-          curl -X DELETE \
-            -H "Authorization: JWT $TOKEN" \
-            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/latest/" \
-            && echo "✅ Tag latest DELETADA" \
-            || echo "⚠️  Tag latest não encontrada"
+          for TAG in "${TAGS_TO_DELETE[@]}"; do
+            echo "🗑️ Tentando deletar tag: $TAG"
+            curl -X DELETE \
+              -H "Authorization: JWT $TOKEN" \
+              "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/$TAG/" \
+              && echo "✅ Tag $TAG deletada" \
+              || echo "⚠️  Tag $TAG não encontrada"
+          done
           
-          echo "🎯 LIMPEZA CONCLUÍDA!"
+          echo "🎯 DESTRUIÇÃO CONCLUÍDA!"
