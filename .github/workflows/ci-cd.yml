@@ -89,9 +89,9 @@ jobs:
           echo "docker_image_name=${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}" >> $GITHUB_OUTPUT
           echo "docker_image_tag=1.0.${{ github.run_id }}" >> $GITHUB_OUTPUT
 
-  # 🎯 TUDO EM UM JOB SÓ: Deploy → Wait → Destroy Koyeb → Destroy Docker
-  deploy-wait-destroy:
-    name: 🚀 Deploy → Wait → Destroy
+  # 🚀 DEPLOY AUTOMÁTICO
+  deploy:
+    name: 🚀 Deploy to Koyeb
     runs-on: ubuntu-latest
     needs: build-and-push
     
@@ -102,39 +102,63 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # 🚀 FASE 1: DEPLOY KOYEB
       - name: Deploy to Koyeb
         run: |
           echo "🚀 INICIANDO DEPLOY NO KOYEB..."
           terraform -chdir=infra init
           terraform -chdir=infra apply -auto-approve
+          echo "✅ DEPLOY CONCLUÍDO!"
+          echo "🌐 Aplicação disponível em: https://ger-tarefas-seu-app.koyeb.app"
         env:
           KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
           TF_VAR_docker_image_name: ${{ needs.build-and-push.outputs.docker_image_name }}
           TF_VAR_docker_image_tag: ${{ needs.build-and-push.outputs.docker_image_tag }}
 
-      # # ⏰ FASE 2: WAIT
-      # - name: Wait 90 seconds
-      #   run: |
-      #     echo "⏰ AGUARDANDO 90 SEGUNDOS..."
-      #     sleep 90
-      #     echo "✅ PRONTO PARA DESTROY"
-
-      # 🗑️ FASE 3: DESTROY KOYEB
-      - name: Destroy Koyeb
-        environment: production
+  # ⏰ WAIT
+  wait:
+    name: ⏰ Wait for Testing
+    runs-on: ubuntu-latest
+    needs: deploy
+    
+    steps:
+      - name: Wait and display info
         run: |
-          echo "🗑️ DESTRUINDO APLICAÇÃO NO KOYEB..."
+          echo "⏰ AGUARDANDO 60 SEGUNDOS PARA TESTES..."
+          echo "🌐 Aplicação disponível: https://ger-tarefas-seu-app.koyeb.app"
+          echo "✅ Deploy concluído com sucesso!"
+          echo "⏰ Aguardando 60 segundos antes do destroy..."
+          sleep 60
+          echo "✅ PRONTO PARA DESTROY (se aprovado)"
+
+  # 🗑️ DESTROY COM APROVAÇÃO
+  destroy:
+    name: 🗑️ Destroy Resources
+    runs-on: ubuntu-latest
+    needs: wait
+    environment: production  # ✅ SÓ O DESTROY REQUER APROVAÇÃO
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Destroy Koyeb Resources
+        run: |
+          echo "✅ APROVAÇÃO CONFIRMADA!"
+          echo "🗑️ INICIANDO DESTRUIÇÃO DA APLICAÇÃO NO KOYEB..."
           terraform -chdir=infra destroy -auto-approve
+          echo "✅ KOYEB DESTRUÍDO COM SUCESSO!"
         env:
           KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
+          TF_VAR_docker_image_name: ${{ needs.build-and-push.outputs.docker_image_name }}
+          TF_VAR_docker_image_tag: ${{ needs.build-and-push.outputs.docker_image_tag }}
 
-      # 🐳 FASE 4: DESTROY DOCKER IMAGES
       - name: Destroy Docker Images
         run: |
           echo "🐳 DELETANDO IMAGENS DO DOCKER HUB..."
           
-          # Token para API do Docker Hub
           TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
             -d '{"username": "'${{ env.DOCKER_USER }}'", "password": "'${{ secrets.DOCKER_PASS }}'"}' \
             https://hub.docker.com/v2/users/login/ | jq -r .token)
@@ -160,4 +184,4 @@ jobs:
             && echo "✅ Tag latest DELETADA" \
             || echo "⚠️  Tag latest não encontrada"
           
-          echo "🎯 LIMPEZA CONCLUÍDA!"
+          echo "🎯 DESTRUIÇÃO CONCLUÍDA!"
