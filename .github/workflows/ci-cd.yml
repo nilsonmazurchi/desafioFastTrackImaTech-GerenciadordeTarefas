@@ -8,6 +8,15 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      execute_destroy:
+        description: 'Executar destroy após o deploy?'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+        - 'true'
+        - 'false'
 
 env:
   DOCKER_USER: nilsonmazurchi
@@ -89,9 +98,9 @@ jobs:
           echo "docker_image_name=${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}" >> $GITHUB_OUTPUT
           echo "docker_image_tag=1.0.${{ github.run_id }}" >> $GITHUB_OUTPUT
 
-  # 🚀 DEPLOY AUTOMÁTICO
-  deploy:
-    name: 🚀 Deploy to Koyeb
+  # 🎯 TUDO EM UM JOB SÓ: Deploy → Wait → Destroy (OPCIONAL)
+  deploy-wait-destroy:
+    name: 🚀 Deploy → Wait → Destroy (Opcional)
     runs-on: ubuntu-latest
     needs: build-and-push
     
@@ -102,6 +111,7 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
+      # 🚀 FASE 1: DEPLOY KOYEB
       - name: Deploy to Koyeb
         run: |
           echo "🚀 INICIANDO DEPLOY NO KOYEB..."
@@ -114,56 +124,39 @@ jobs:
           TF_VAR_docker_image_name: ${{ needs.build-and-push.outputs.docker_image_name }}
           TF_VAR_docker_image_tag: ${{ needs.build-and-push.outputs.docker_image_tag }}
 
-  # ⏰ WAIT
-  wait:
-    name: ⏰ Wait for Testing
-    runs-on: ubuntu-latest
-    needs: deploy
-    
-    steps:
-      - name: Wait and display info
+      # ⏰ FASE 2: WAIT
+      - name: Wait 60 seconds
         run: |
-          echo "⏰ AGUARDANDO 60 SEGUNDOS PARA TESTES..."
-          echo "🌐 Aplicação disponível: https://ger-tarefas-seu-app.koyeb.app"
-          echo "✅ Deploy concluído com sucesso!"
-          echo "⏰ Aguardando 60 segundos antes do destroy..."
+          echo "⏰ AGUARDANDO 60 SEGUNDOS..."
+          echo "🌐 Aplicação rodando: https://ger-tarefas-seu-app.koyeb.app"
           sleep 60
-          echo "✅ PRONTO PARA DESTROY (se aprovado)"
+          echo "✅ PRONTO PARA PRÓXIMA FASE"
 
-  # 🗑️ DESTROY COM APROVAÇÃO
-  destroy:
-    name: 🗑️ Destroy Resources
-    runs-on: ubuntu-latest
-    needs: wait
-    environment: production  # ✅ SÓ O DESTROY REQUER APROVAÇÃO
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Init (Destroy)
+      # ❓ FASE 3: VERIFICAR SE DEVE EXECUTAR DESTROY
+      - name: Check if should destroy
+        id: check-destroy
         run: |
-          echo "🔧 INICIALIZANDO TERRAFORM PARA DESTROY..."
-          terraform -chdir=infra init
-          echo "✅ Terraform inicializado!"
-        env:
-          KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
+          if [ "${{ github.event.inputs.execute_destroy }}" = "true" ]; then
+            echo "✅ DESTROY SOLICITADO - Continuando..."
+            echo "should_destroy=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ DESTROY NÃO SOLICITADO - Finalizando workflow"
+            echo "should_destroy=false" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Destroy Koyeb Resources
+      # 🗑️ FASE 4: DESTROY KOYEB (APENAS SE SOLICITADO)
+      - name: Destroy Koyeb
+        if: steps.check-destroy.outputs.should_destroy == 'true'
         run: |
-          echo "✅ APROVAÇÃO CONFIRMADA!"
-          echo "🗑️ INICIANDO DESTRUIÇÃO DA APLICAÇÃO NO KOYEB..."
+          echo "🗑️ DESTRUINDO APLICAÇÃO NO KOYEB..."
           terraform -chdir=infra destroy -auto-approve
-          echo "✅ KOYEB DESTRUÍDO COM SUCESSO!"
+          echo "✅ KOYEB DESTRUÍDO!"
         env:
           KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
-          TF_VAR_docker_image_name: ${{ needs.build-and-push.outputs.docker_image_name }}
-          TF_VAR_docker_image_tag: ${{ needs.build-and-push.outputs.docker_image_tag }}
 
+      # 🐳 FASE 5: DESTROY DOCKER IMAGES (APENAS SE SOLICITADO)
       - name: Destroy Docker Images
+        if: steps.check-destroy.outputs.should_destroy == 'true'
         run: |
           echo "🐳 DELETANDO IMAGENS DO DOCKER HUB..."
           
@@ -193,3 +186,14 @@ jobs:
             || echo "⚠️  Tag latest não encontrada"
           
           echo "🎯 DESTRUIÇÃO CONCLUÍDA!"
+
+      # ✅ FASE 6: MENSAGEM FINAL
+      - name: Final message
+        run: |
+          if [ "${{ github.event.inputs.execute_destroy }}" = "true" ]; then
+            echo "🎯 WORKFLOW COMPLETO: Deploy → Wait → Destroy"
+          else
+            echo "🚀 WORKFLOW PARCIAL: Apenas Deploy"
+            echo "🌐 Aplicação continua rodando: https://ger-tarefas-seu-app.koyeb.app"
+            echo "💡 Para destruir, execute o workflow novamente selecionando 'execute_destroy: true'"
+          fi
