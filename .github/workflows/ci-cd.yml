@@ -89,12 +89,12 @@ jobs:
           echo "docker_image_name=${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}" >> $GITHUB_OUTPUT
           echo "docker_image_tag=1.0.${{ github.run_id }}" >> $GITHUB_OUTPUT
 
-  # ✅ DEPLOY SEM DESTROY AUTOMÁTICO
-  deploy-only:
-    name: 🚀 Deploy to Koyeb
+  # 🎯 TUDO EM UM JOB SÓ: Deploy → Wait → Destroy Koyeb → Destroy Docker
+  deploy-wait-destroy:
+    name: 🚀 Deploy → Wait → Destroy
     runs-on: ubuntu-latest
     needs: build-and-push
-    environment: production
+    environment: staging
     
     steps:
       - name: Checkout code
@@ -103,6 +103,7 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
+      # 🚀 FASE 1: DEPLOY KOYEB
       - name: Deploy to Koyeb
         run: |
           echo "🚀 INICIANDO DEPLOY NO KOYEB..."
@@ -113,55 +114,50 @@ jobs:
           TF_VAR_docker_image_name: ${{ needs.build-and-push.outputs.docker_image_name }}
           TF_VAR_docker_image_tag: ${{ needs.build-and-push.outputs.docker_image_tag }}
 
-  # ✅ DESTROY MANUAL (APENAS QUANDO SOLICITADO)
-  destroy-manual:
-    name: 🗑️ Destroy Resources (Manual)
-    runs-on: ubuntu-latest
-    needs: deploy-only
-    environment: production
-    # ⚠️ SÓ EXECUTA QUANDO MANUALMENTE DISPARADO
-    if: ${{ github.event_name == 'workflow_dispatch' }}
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      # # ⏰ FASE 2: WAIT
+      # - name: Wait 90 seconds
+      #   run: |
+      #     echo "⏰ AGUARDANDO 90 SEGUNDOS..."
+      #     sleep 90
+      #     echo "✅ PRONTO PARA DESTROY"
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+      # # 🗑️ FASE 3: DESTROY KOYEB
+      # - name: Destroy Koyeb
+      #   run: |
+      #     echo "🗑️ DESTRUINDO APLICAÇÃO NO KOYEB..."
+      #     terraform -chdir=infra destroy -auto-approve
+      #   env:
+      #     KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
 
-      - name: Confirm Destruction
-        run: |
-          echo "⚠️  ⚠️  ⚠️  ATENÇÃO: ISSO VAI DESTRUIR TODOS OS RECURSOS NO KOYEB!"
-          echo "Aplicação: ${{ needs.build-and-push.outputs.docker_image_name }}"
-          echo "Tag: ${{ needs.build-and-push.outputs.docker_image_tag }}"
-
-      - name: Destroy Koyeb Resources
-        run: |
-          echo "🗑️ DESTRUINDO APLICAÇÃO NO KOYEB..."
-          terraform -chdir=infra destroy -auto-approve
-        env:
-          KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
-
-      - name: Destroy Docker Images
-        run: |
-          echo "🐳 DELETANDO IMAGENS DO DOCKER HUB..."
+      # # 🐳 FASE 4: DESTROY DOCKER IMAGES
+      # - name: Destroy Docker Images
+      #   run: |
+      #     echo "🐳 DELETANDO IMAGENS DO DOCKER HUB..."
           
-          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
-            -d '{"username": "'${{ env.DOCKER_USER }}'", "password": "'${{ secrets.DOCKER_PASS }}'"}' \
-            https://hub.docker.com/v2/users/login/ | jq -r .token)
+      #     # Token para API do Docker Hub
+      #     TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
+      #       -d '{"username": "'${{ env.DOCKER_USER }}'", "password": "'${{ secrets.DOCKER_PASS }}'"}' \
+      #       https://hub.docker.com/v2/users/login/ | jq -r .token)
           
-          # Deleta imagem pelo tag do run_id
-          curl -X DELETE \
-            -H "Authorization: JWT $TOKEN" \
-            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/1.0.${{ github.run_id }}/" \
-            && echo "✅ Imagem 1.0.${{ github.run_id }} deletada" \
-            || echo "⚠️  Imagem 1.0.${{ github.run_id }} não encontrada"
+      #     # Deleta imagem pelo tag do run_id
+      #     curl -X DELETE \
+      #       -H "Authorization: JWT $TOKEN" \
+      #       "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/1.0.${{ github.run_id }}/" \
+      #       && echo "✅ Imagem 1.0.${{ github.run_id }} deletada" \
+      #       || echo "⚠️  Imagem 1.0.${{ github.run_id }} não encontrada"
           
-          # Deleta imagem pelo SHA
-          curl -X DELETE \
-            -H "Authorization: JWT $TOKEN" \
-            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/${{ github.sha }}/" \
-            && echo "✅ Imagem ${{ github.sha }} deletada" \
-            || echo "⚠️  Imagem ${{ github.sha }} não encontrada"
+      #     # Deleta imagem pelo SHA
+      #     curl -X DELETE \
+      #       -H "Authorization: JWT $TOKEN" \
+      #       "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/${{ github.sha }}/" \
+      #       && echo "✅ Imagem ${{ github.sha }} deletada" \
+      #       || echo "⚠️  Imagem ${{ github.sha }} não encontrada"
 
-          echo "🎯 DESTRUIÇÃO CONCLUÍDA!"
+      #     # Deleta Tag LATEST
+      #     curl -X DELETE \
+      #       -H "Authorization: JWT $TOKEN" \
+      #       "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/latest/" \
+      #       && echo "✅ Tag latest DELETADA" \
+      #       || echo "⚠️  Tag latest não encontrada"
+          
+      #     echo "🎯 LIMPEZA CONCLUÍDA!"

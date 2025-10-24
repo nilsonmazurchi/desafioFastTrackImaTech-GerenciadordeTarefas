@@ -1,0 +1,66 @@
+﻿name: 🗑️ Destroy Koyeb Application
+
+on:
+  workflow_dispatch:  # Só executa manualmente
+    inputs:
+      confirmation:
+        description: "Digite 'DESTROY' para confirmar a destruição"
+        required: true
+        default: "cancel"
+
+env:
+  DOCKER_USER: nilsonmazurchi
+  SERVICE_NAME: gerenciador-tarefas
+
+jobs:
+  destroy:
+    name: 🗑️ Destroy Koyeb and Docker Images
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "DESTROY" ]; then
+            echo "❌ Confirmação inválida. Digite 'DESTROY' para prosseguir."
+            exit 1
+          fi
+          echo "✅ Confirmação validada - Iniciando destruição..."
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Destroy Koyeb Resources
+        run: |
+          echo "🗑️ DESTRUINDO APLICAÇÃO NO KOYEB..."
+          terraform -chdir=infra init
+          terraform -chdir=infra destroy -auto-approve
+        env:
+          KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
+
+      - name: Destroy Docker Images
+        run: |
+          echo "🐳 DELETANDO IMAGENS DO DOCKER HUB..."
+          
+          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
+            -d '{"username": "'${{ env.DOCKER_USER }}'", "password": "'${{ secrets.DOCKER_PASS }}'"}' \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+          
+          # Deleta imagem pelo tag do run_id
+          curl -X DELETE \
+            -H "Authorization: JWT $TOKEN" \
+            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/1.0.${{ github.run_number }}/" \
+            && echo "✅ Imagem 1.0.${{ github.run_number }} deletada" \
+            || echo "⚠️  Imagem 1.0.${{ github.run_number }} não encontrada"
+          
+          # Deleta imagem pelo SHA (opcional)
+          curl -X DELETE \
+            -H "Authorization: JWT $TOKEN" \
+            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/latest/" \
+            && echo "✅ Tag latest deletada" \
+            || echo "⚠️  Tag latest não encontrada"
+          
+          echo "🎯 DESTRUIÇÃO CONCLUÍDA!"
