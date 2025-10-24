@@ -128,45 +128,45 @@ jobs:
           echo "🔧 Para DESTRUIR a aplicação, execute o workflow de destroy manualmente"
           echo "💡 URL do Destroy Workflow: https://github.com/${{ github.repository }}/actions/workflows/destroy.yml"
 
-  # 🗑️ WORKFLOW SEPARADO PARA DESTROY (MANUAL)
-  destroy-manual:
-    name: 🗑️ Destroy Manual (Aprovação Requerida)
-    if: false  # ✅ Não executa automaticamente
-    runs-on: ubuntu-latest
-    environment: production
+  # # 🗑️ WORKFLOW SEPARADO PARA DESTROY (MANUAL)
+  # destroy-manual:
+  #   name: 🗑️ Destroy Manual (Aprovação Requerida)
+  #   if: false  # ✅ Não executa automaticamente
+  #   runs-on: ubuntu-latest
+  #   environment: production
     
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v3
+  #     - name: Set up Terraform
+  #       uses: hashicorp/setup-terraform@v3
 
-      - name: Destroy Koyeb
-        run: |
-          echo "🗑️ DESTRUINDO APLICAÇÃO NO KOYEB..."
-          terraform -chdir=infra destroy -auto-approve
-        env:
-          KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
+  #     - name: Destroy Koyeb
+  #       run: |
+  #         echo "🗑️ DESTRUINDO APLICAÇÃO NO KOYEB..."
+  #         terraform -chdir=infra destroy -auto-approve
+  #       env:
+  #         KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
 
-      - name: Destroy Docker Images
-        run: |
-          echo "🐳 DELETANDO IMAGENS DO DOCKER HUB..."
+  #     - name: Destroy Docker Images
+  #       run: |
+  #         echo "🐳 DELETANDO IMAGENS DO DOCKER HUB..."
           
-          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
-            -d '{"username": "'${{ env.DOCKER_USER }}'", "password": "'${{ secrets.DOCKER_PASS }}'"}' \
-            https://hub.docker.com/v2/users/login/ | jq -r .token)
+  #         TOKEN=$(curl -s -H "Content-Type: application/json" -X POST \
+  #           -d '{"username": "'${{ env.DOCKER_USER }}'", "password": "'${{ secrets.DOCKER_PASS }}'"}' \
+  #           https://hub.docker.com/v2/users/login/ | jq -r .token)
           
-          curl -X DELETE \
-            -H "Authorization: JWT $TOKEN" \
-            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/1.0.${{ github.run_id }}/" \
-            && echo "✅ Imagem 1.0.${{ github.run_id }} deletada" \
-            || echo "⚠️  Imagem 1.0.${{ github.run_id }} não encontrada"
+  #         curl -X DELETE \
+  #           -H "Authorization: JWT $TOKEN" \
+  #           "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/1.0.${{ github.run_id }}/" \
+  #           && echo "✅ Imagem 1.0.${{ github.run_id }} deletada" \
+  #           || echo "⚠️  Imagem 1.0.${{ github.run_id }} não encontrada"
           
-          curl -X DELETE \
-            -H "Authorization: JWT $TOKEN" \
-            "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/${{ github.sha }}/" \
-            && echo "✅ Imagem ${{ github.sha }} deletada" \
-            || echo "⚠️  Imagem ${{ github.sha }} não encontrada"
+  #         curl -X DELETE \
+  #           -H "Authorization: JWT $TOKEN" \
+  #           "https://hub.docker.com/v2/repositories/${{ env.DOCKER_USER }}/${{ env.SERVICE_NAME }}/tags/${{ github.sha }}/" \
+  #           && echo "✅ Imagem ${{ github.sha }} deletada" \
+  #           || echo "⚠️  Imagem ${{ github.sha }} não encontrada"
 
-          echo "🎯 DESTRUIÇÃO CONCLUÍDA!"
+  #         echo "🎯 DESTRUIÇÃO CONCLUÍDA!"
